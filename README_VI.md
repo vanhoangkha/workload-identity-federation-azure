@@ -1,14 +1,5 @@
 # HƯỚNG DẪN TRIỂN KHAI WORKLOAD IDENTITY FEDERATION GIỮA AZURE VÀ GOOGLE CLOUD
 
-## Thông tin tài liệu
-
-| Hạng mục | Nội dung |
-|----------|----------|
-| Tiêu đề | Hướng dẫn triển khai Workload Identity Federation giữa Azure và Google Cloud |
-| Phiên bản | 1.0 |
-| Ngày ban hành | 29/03/2026 |
-| Đơn vị biên soạn | VinSOC CloudSecurity |
-| Phân loại | Tài liệu kỹ thuật - Công khai |
 
 ---
 
@@ -230,20 +221,6 @@ pip install google-cloud-bigquery google-cloud-storage google-cloud-logging
 | Token validation failed | Sai issuer URI hoặc tenant ID | Kiểm tra format: https://sts.windows.net/<TENANT_ID>/ (có dấu / cuối) |
 | Subject mismatch | Sai Object ID | Dùng Object ID của Managed Identity, không phải Client ID |
 
----
-
-## 8. Danh sách hình ảnh minh họa
-
-| STT | Vị trí | Nội dung cần chụp |
-|-----|--------|-------------------|
-| 1 | Mục 5.1 | Azure Portal: App Registration với Application ID URI |
-| 2 | Mục 5.2 | Azure Portal: Managed Identity đã gán cho VM |
-| 3 | Mục 5.3 | Terminal: kết quả bật API thành công |
-| 4 | Mục 5.4 | Google Cloud Console: Workload Identity Pool |
-| 5 | Mục 5.5 | Terminal: kết quả tạo OIDC provider |
-| 6 | Mục 5.6 | Google Cloud Console: Service Account |
-| 7 | Mục 5.7 | Terminal: kết quả cấp quyền impersonation |
-| 8 | Mục 5.9 | Nội dung tệp gcp-credentials.json |
 
 ---
 
