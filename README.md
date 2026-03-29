@@ -486,77 +486,223 @@ curl -s -X POST \
 
 ---
 
+
+
+---
+
 ## Enterprise Best Practices
 
 ### 1. Pool and Provider Design
 
-- Separate pools per environment (production, staging, development)
-- Separate providers per Azure tenant
-- Use naming convention: `azure-pool-{environment}`, `azure-provider-{tenant-alias}`
+Separate pools by environment to prevent cross-environment access:
+
+```
+Organization
+  +-- Pool: aws-production     (or azure-production)
+  |     +-- Provider: account-111111111111
+  |     +-- Provider: account-222222222222
+  +-- Pool: aws-staging
+  |     +-- Provider: account-333333333333
+  +-- Pool: aws-development
+        +-- Provider: account-444444444444
+```
+
+Rules:
+- One pool per environment per cloud provider
+- One provider per AWS account or Azure tenant
 - Never share pools across environments
+- Use consistent naming: `{cloud}-{environment}`
 
-### 2. Attribute Conditions (Restrict Access)
+### 2. Attribute Mapping and Conditions
 
+Always restrict which identities can authenticate. Never leave attribute conditions empty in production.
+
+**AWS:**
 ```bash
-# Only allow specific managed identity
---attribute-condition="assertion.sub == '<MANAGED_IDENTITY_OBJECT_ID>'"
+# Only allow assumed-role ARNs (block IAM users, root)
+--attribute-condition="assertion.arn.startsWith('arn:aws:sts::<ACCOUNT_ID>:assumed-role/')"
+
+# Only allow specific roles
+--attribute-condition="assertion.arn.contains('assumed-role/production-app/')"
+
+# Map additional attributes for fine-grained access
+--attribute-mapping="google.subject=assertion.arn,attribute.aws_role=assertion.arn.extract('assumed-role/{role}/')"
+```
+
+**Azure:**
+```bash
+# Only allow specific managed identities
+--attribute-condition="assertion.sub == '<OBJECT_ID>'"
 
 # Only allow specific tenant
 --attribute-condition="assertion.tid == '<TENANT_ID>'"
 ```
 
-Alternatively, use Entra ID app role assignments to restrict which identities can obtain tokens.
-
 ### 3. Service Account Strategy
 
-| Pattern | When to Use |
-|---------|-------------|
-| One SA per workload | Production - maximum isolation |
-| One SA per team | Staging - balance of isolation and management |
-| One SA per environment | Development only |
+| Pattern | Use Case | Risk Level |
+|---------|----------|------------|
+| One SA per workload | Production critical apps | Lowest |
+| One SA per team | Staging, shared services | Medium |
+| One SA per environment | Development only | Highest |
 
-Always grant minimum required roles at resource level, not project level.
-
-### 4. Organizational Policy Constraints
+Rules:
+- Grant roles at resource level, not project level
+- Use custom roles when predefined roles are too broad
+- Never use `roles/editor` or `roles/owner` in production
+- Review SA permissions quarterly
 
 ```bash
-# Disable SA key creation (force WIF usage)
+# Good: resource-level, specific role
+gcloud storage buckets add-iam-policy-binding gs://specific-bucket \
+  --role=roles/storage.objectViewer \
+  --member="serviceAccount:..."
+
+# Bad: project-level, broad role
+gcloud projects add-iam-policy-binding PROJECT \
+  --role=roles/editor \
+  --member="serviceAccount:..."
+```
+
+### 4. Credential Configuration Management
+
+The credential config file contains no secrets, but manage it properly:
+
+| Workload Type | Storage Method |
+|---------------|---------------|
+| EC2 / Azure VM | File on disk, path in env var |
+| Lambda / Functions | Bundled in deployment package |
+| EKS / AKS | Kubernetes Secret or ConfigMap |
+| CI/CD Pipeline | Pipeline secrets manager |
+| Terraform | Environment variable |
+
+Rules:
+- Safe to commit to git (no secrets inside)
+- Use separate credential configs per SA (one per use case)
+- Set `GOOGLE_APPLICATION_CREDENTIALS` env var, never hardcode paths
+
+### 5. Organizational Policy Constraints
+
+Enforce WIF usage across the organization:
+
+```bash
+# Disable SA key creation (force WIF)
 gcloud org-policies set-policy --project=<PROJECT_ID> << EOF
 constraint: iam.disableServiceAccountKeyCreation
 booleanPolicy:
   enforced: true
 EOF
+
+# Restrict allowed identity providers
+gcloud org-policies set-policy --project=<PROJECT_ID> << EOF
+constraint: iam.workloadIdentityPoolProviders
+listPolicy:
+  allowedValues:
+    - "aws"
+    - "oidc"
+EOF
+
+# Disable SA key upload
+gcloud org-policies set-policy --project=<PROJECT_ID> << EOF
+constraint: iam.disableServiceAccountKeyUpload
+booleanPolicy:
+  enforced: true
+EOF
 ```
 
-### 5. Monitoring
+### 6. Monitoring and Audit
+
+Enable and monitor Cloud Audit Logs:
 
 ```bash
-# View federated token exchanges
-gcloud logging read 'protoPayload.serviceName="sts.googleapis.com"' --limit=10
+# Token exchange events (who authenticated)
+gcloud logging read '
+  resource.type="audited_resource"
+  AND protoPayload.serviceName="sts.googleapis.com"
+' --project=<PROJECT_ID> --limit=10 --format=json
 
-# View SA impersonation events
-gcloud logging read 'protoPayload.methodName="GenerateAccessToken"' --limit=10
+# SA impersonation events (who got access tokens)
+gcloud logging read '
+  resource.type="service_account"
+  AND protoPayload.methodName="GenerateAccessToken"
+' --project=<PROJECT_ID> --limit=10 --format=json
 ```
 
-### 6. Network Security
+Set up alerts:
+- Alert on token exchange failures (potential unauthorized access attempts)
+- Alert on new principal accessing a SA for the first time
+- Alert on access from unexpected AWS accounts or Azure tenants
+- Export logs to SIEM via Logpush for centralized monitoring
 
-Use regional STS endpoints for data residency:
+### 7. Network Security
+
+Use VPC Service Controls to restrict STS access:
+
+```bash
+# Create service perimeter
+gcloud access-context-manager perimeters create wif-perimeter \
+  --resources="projects/<PROJECT_NUMBER>" \
+  --restricted-services="sts.googleapis.com,iamcredentials.googleapis.com"
+```
+
+Use regional STS endpoints for data residency compliance:
 ```
 https://sts.us-central1.rep.googleapis.com/v1/token
 https://sts.europe-west1.rep.googleapis.com/v1/token
+https://sts.asia-southeast1.rep.googleapis.com/v1/token
 ```
 
-### 7. Azure-Specific: Entra ID App Security
+### 8. Token Lifetime and Session Management
 
-- Enable app role assignments to restrict which managed identities can get tokens
-- Set token lifetime policies for the Entra ID application
-- Monitor sign-in logs in Entra ID for the WIF application
+- Default SA token lifetime: 1 hour (recommended)
+- Maximum configurable: 12 hours (requires org policy override)
+- Tokens are not revocable - keep lifetime short
+- For long-running jobs, implement token refresh in application code
+
+```python
+# Python: auto-refresh is built into google-auth library
+# Just set GOOGLE_APPLICATION_CREDENTIALS and the library handles refresh
+from google.cloud import bigquery
+client = bigquery.Client()  # auto-refreshes tokens
+```
+
+### 9. Disaster Recovery and High Availability
+
+- Credential config files are stateless - no backup needed
+- Pool/Provider config: manage via Terraform with remote state
+- If GCP STS is unavailable: workloads cannot authenticate (design for this)
+- Mitigation: use regional STS endpoints, implement circuit breaker pattern
+- Keep Terraform state in GCS backend with versioning enabled
+
+```hcl
+terraform {
+  backend "gcs" {
+    bucket = "my-terraform-state"
+    prefix = "wif"
+  }
+}
+```
+
+### 10. Multi-Cloud Governance
+
+For organizations using both AWS and Azure with GCP:
+
+| Aspect | Recommendation |
+|--------|---------------|
+| Pool naming | `{cloud}-{environment}` (aws-production, azure-staging) |
+| SA naming | `{cloud}-{function}-{environment}` (aws-bigquery-production) |
+| Role assignment | Same least-privilege rules regardless of source cloud |
+| Monitoring | Unified dashboard for all WIF token exchanges |
+| IaC | Separate Terraform modules per cloud, shared variables |
+| Rotation | No rotation needed (keyless), but review access quarterly |
+
+
 
 ---
 
 ## Terraform Module
 
-See [terraform/](terraform/) for a production-ready module.
+See [terraform/](terraform/) for a production-ready module. Verified with `terraform apply` + BigQuery test on 2026-03-29.
 
 ```bash
 cd terraform
@@ -567,18 +713,21 @@ terraform plan
 terraform apply
 ```
 
-The module creates:
-- Workload Identity Pool (per environment)
-- OIDC Provider for Azure Entra ID
-- Service Accounts with least-privilege roles
-- WIF bindings (workloadIdentityUser + serviceAccountTokenCreator)
-
----
-
 ## Examples
 
 | File | Description |
 |------|-------------|
-| [examples/bigquery_query.py](examples/bigquery_query.py) | Query BigQuery from Azure VM |
+| [examples/bigquery_query.py](examples/bigquery_query.py) | Query BigQuery |
 | [examples/gcs_sync.py](examples/gcs_sync.py) | Sync files to Cloud Storage |
 | [examples/cloud_logging.py](examples/cloud_logging.py) | Send logs to Cloud Logging |
+
+## References
+
+- [GCP: Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds)
+- [GCP: WIF Best Practices](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation)
+- [Terraform: Google Cloud Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
+
+## License
+
+MIT License - see [LICENSE](LICENSE)
+
