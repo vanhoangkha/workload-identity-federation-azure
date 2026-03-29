@@ -237,3 +237,51 @@ pip install google-cloud-bigquery google-cloud-storage google-cloud-logging
 
 4. Terraform - Google Cloud Provider
    https://registry.terraform.io/providers/hashicorp/google/latest/docs
+
+---
+
+## 10. Kết quả kiểm thử thực tế
+
+Kiểm thử end-to-end được thực hiện ngày 29/03/2026, xác thực từ Azure Service Principal tới Google Cloud BigQuery qua Workload Identity Federation.
+
+### Môi trường kiểm thử
+
+| Thành phần | Chi tiết |
+|------------|----------|
+| Azure Identity | Service Principal (Entra ID App Registration) |
+| GCP Project | Môi trường lab |
+| WIF Pool | azure-pool |
+| WIF Provider | azure-provider (OIDC) |
+| GCP Service Account | azure-bigquery-sa |
+| Dịch vụ đích | BigQuery |
+
+### Kết quả
+
+```
+1. Azure token:     OK (1390 ký tự)
+2. GCP STS token:   OK (1029 ký tự)
+3. SA Access Token:  OK (1024 ký tự)
+4. Kết quả truy vấn BigQuery:
+   hamlet: 5318
+   kinghenryv: 5104
+   cymbeline: 4875
+   troilusandcressida: 4795
+   kinglear: 4784
+
+=== Azure -> GCP Workload Identity Federation: THÀNH CÔNG! ===
+```
+
+### Luồng xác thực đã xác minh
+
+```
+Azure Entra ID (JWT token, 1390 ký tự)
+    |
+    v  Trao đổi token
+Google STS (federated token, 1029 ký tự)
+    |
+    v  Mạo danh
+GCP Service Account (access token, 1024 ký tự)
+    |
+    v  Truy vấn
+BigQuery (5 dòng kết quả)
+```

@@ -375,3 +375,94 @@ steps:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Verified Test Results
+
+The following end-to-end test was performed on 2026-03-29, authenticating from an Azure Service Principal to Google Cloud BigQuery via Workload Identity Federation.
+
+### Test Environment
+
+| Component | Detail |
+|-----------|--------|
+| Azure Identity | Service Principal (Entra ID App Registration) |
+| GCP Project | Lab environment |
+| WIF Pool | azure-pool |
+| WIF Provider | azure-provider (OIDC) |
+| GCP Service Account | azure-bigquery-sa |
+| Target Service | BigQuery |
+
+### Test Output
+
+```
+1. Azure token:     OK (1390 chars)
+2. GCP STS token:   OK (1029 chars)
+3. SA Access Token:  OK (1024 chars)
+4. BigQuery query result:
+   hamlet: 5318
+   kinghenryv: 5104
+   cymbeline: 4875
+   troilusandcressida: 4795
+   kinglear: 4784
+
+=== Azure -> GCP Workload Identity Federation: SUCCESS! ===
+```
+
+### Authentication Flow Verified
+
+```
+Azure Entra ID (JWT token, 1390 chars)
+    |
+    v  Token Exchange
+Google STS (federated token, 1029 chars)
+    |
+    v  Impersonate
+GCP Service Account (access token, 1024 chars)
+    |
+    v  Query
+BigQuery (5 rows returned)
+```
+
+### Test Script
+
+```bash
+TENANT_ID="<TENANT_ID>"
+APP_ID="<APP_ID>"
+APP_SECRET="<APP_SECRET>"
+APP_ID_URI="api://<APP_ID>"
+PROJECT_NUMBER="<PROJECT_NUMBER>"
+PROJECT_ID="<PROJECT_ID>"
+
+# 1. Get Azure token
+AZURE_TOKEN=$(curl -s -X POST \
+  "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+  -d "client_id=$APP_ID" \
+  -d "client_secret=$APP_SECRET" \
+  -d "scope=${APP_ID_URI}/.default" \
+  -d "grant_type=client_credentials" | jq -r '.access_token')
+
+# 2. Exchange for GCP STS token
+STS_TOKEN=$(curl -s -X POST "https://sts.googleapis.com/v1/token" \
+  --data-urlencode "audience=//iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/azure-pool/providers/azure-provider" \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  --data-urlencode "requested_token_type=urn:ietf:params:oauth:token-type:access_token" \
+  --data-urlencode "scope=https://www.googleapis.com/auth/cloud-platform" \
+  --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  --data-urlencode "subject_token=$AZURE_TOKEN" | jq -r '.access_token')
+
+# 3. Impersonate Service Account
+SA_TOKEN=$(curl -s -X POST \
+  "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/azure-bigquery-sa@${PROJECT_ID}.iam.gserviceaccount.com:generateAccessToken" \
+  -H "Authorization: Bearer $STS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"scope": ["https://www.googleapis.com/auth/cloud-platform"]}' | jq -r '.accessToken')
+
+# 4. Query BigQuery
+curl -s -X POST \
+  "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/queries" \
+  -H "Authorization: Bearer $SA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT corpus, COUNT(*) as cnt FROM `bigquery-public-data.samples.shakespeare` GROUP BY corpus ORDER BY cnt DESC LIMIT 5", "useLegacySql": false}' \
+  | jq -r '.rows[]? | "\(.f[0].v): \(.f[1].v)"'
+```
