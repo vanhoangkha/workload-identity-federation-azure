@@ -466,3 +466,102 @@ curl -s -X POST \
   -d '{"query": "SELECT corpus, COUNT(*) as cnt FROM `bigquery-public-data.samples.shakespeare` GROUP BY corpus ORDER BY cnt DESC LIMIT 5", "useLegacySql": false}' \
   | jq -r '.rows[]? | "\(.f[0].v): \(.f[1].v)"'
 ```
+
+---
+
+## Enterprise Best Practices
+
+### 1. Pool and Provider Design
+
+- Separate pools per environment (production, staging, development)
+- Separate providers per Azure tenant
+- Use naming convention: `azure-pool-{environment}`, `azure-provider-{tenant-alias}`
+- Never share pools across environments
+
+### 2. Attribute Conditions (Restrict Access)
+
+```bash
+# Only allow specific managed identity
+--attribute-condition="assertion.sub == '<MANAGED_IDENTITY_OBJECT_ID>'"
+
+# Only allow specific tenant
+--attribute-condition="assertion.tid == '<TENANT_ID>'"
+```
+
+Alternatively, use Entra ID app role assignments to restrict which identities can obtain tokens.
+
+### 3. Service Account Strategy
+
+| Pattern | When to Use |
+|---------|-------------|
+| One SA per workload | Production - maximum isolation |
+| One SA per team | Staging - balance of isolation and management |
+| One SA per environment | Development only |
+
+Always grant minimum required roles at resource level, not project level.
+
+### 4. Organizational Policy Constraints
+
+```bash
+# Disable SA key creation (force WIF usage)
+gcloud org-policies set-policy --project=<PROJECT_ID> << EOF
+constraint: iam.disableServiceAccountKeyCreation
+booleanPolicy:
+  enforced: true
+EOF
+```
+
+### 5. Monitoring
+
+```bash
+# View federated token exchanges
+gcloud logging read 'protoPayload.serviceName="sts.googleapis.com"' --limit=10
+
+# View SA impersonation events
+gcloud logging read 'protoPayload.methodName="GenerateAccessToken"' --limit=10
+```
+
+### 6. Network Security
+
+Use regional STS endpoints for data residency:
+```
+https://sts.us-central1.rep.googleapis.com/v1/token
+https://sts.europe-west1.rep.googleapis.com/v1/token
+```
+
+### 7. Azure-Specific: Entra ID App Security
+
+- Enable app role assignments to restrict which managed identities can get tokens
+- Set token lifetime policies for the Entra ID application
+- Monitor sign-in logs in Entra ID for the WIF application
+
+---
+
+## Terraform Module
+
+See [terraform/](terraform/) for a production-ready module.
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform init
+terraform plan
+terraform apply
+```
+
+The module creates:
+- Workload Identity Pool (per environment)
+- OIDC Provider for Azure Entra ID
+- Service Accounts with least-privilege roles
+- WIF bindings (workloadIdentityUser + serviceAccountTokenCreator)
+
+---
+
+## Examples
+
+| File | Description |
+|------|-------------|
+| [examples/bigquery_query.py](examples/bigquery_query.py) | Query BigQuery from Azure VM |
+| [examples/gcs_sync.py](examples/gcs_sync.py) | Sync files to Cloud Storage |
+| [examples/cloud_logging.py](examples/cloud_logging.py) | Send logs to Cloud Logging |

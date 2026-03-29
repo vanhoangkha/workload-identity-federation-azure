@@ -1,0 +1,16 @@
+project_id       = "my-gcp-project"
+project_number   = "123456789012"
+azure_tenant_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+azure_app_id_uri = "api://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+environment      = "production"
+
+service_accounts = {
+  "bigquery" = {
+    display_name = "Azure BigQuery SA"
+    roles        = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
+  }
+  "storage" = {
+    display_name = "Azure Storage SA"
+    roles        = ["roles/storage.objectViewer"]
+  }
+}
