@@ -1,16 +1,41 @@
 project_id       = "my-gcp-project"
-project_number   = "123456789012"
 azure_tenant_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 azure_app_id_uri = "api://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 environment      = "production"
 
+# Optional: restrict to specific managed identities (empty = all in tenant)
+azure_allowed_subjects = [
+  "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+]
+
 service_accounts = {
   "bigquery" = {
-    display_name = "Azure BigQuery SA"
-    roles        = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
+    display_name = "BigQuery Analytics"
+    description  = "Read-only access to BigQuery datasets"
+    roles = [
+      "roles/bigquery.dataViewer",
+      "roles/bigquery.jobUser",
+    ]
   }
   "storage" = {
-    display_name = "Azure Storage SA"
-    roles        = ["roles/storage.objectViewer"]
+    display_name = "Cloud Storage Sync"
+    description  = "Read/write access to Cloud Storage"
+    roles = [
+      "roles/storage.objectAdmin",
+    ]
+  }
+  "logging" = {
+    display_name = "Cloud Logging Writer"
+    description  = "Write logs to Cloud Logging"
+    roles = [
+      "roles/logging.logWriter",
+    ]
+  }
+  "terraform" = {
+    display_name = "Terraform IaC"
+    description  = "Manage GCP infrastructure from Azure DevOps"
+    roles = [
+      "roles/editor",
+    ]
   }
 }
