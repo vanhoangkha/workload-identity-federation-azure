@@ -14,6 +14,7 @@
 - [Examples](#examples)
 - [Terraform Module](#terraform-module)
 - [Enterprise Best Practices](#enterprise-best-practices)
+- [Advanced Patterns](#advanced-patterns)
 - [Troubleshooting](#troubleshooting)
 - [References](#references)
 
@@ -366,6 +367,43 @@ steps:
 | Credential config flag | `--aws --enable-imdsv2` | `--azure --app-id-uri=<URI>` |
 
 ---
+
+## Advanced Patterns
+
+### Hub-and-Spoke (Enterprise Multi-Subscription)
+
+For organizations with many Azure subscriptions, the **Hub-and-Spoke** pattern uses a single Entra ID App Registration as the hub — all Managed Identities request tokens for this one app, and GCP WIF only needs one OIDC provider.
+
+```
+MI in Subscription A ──┐
+MI in Subscription B ──┼──→ Hub App (Entra ID) ──→ GCP WIF Pool (1 provider)
+MI in Subscription C ──┘
+```
+
+**Benefits:**
+- Single WIF OIDC provider regardless of how many subscriptions/MIs you have
+- Onboarding only requires creating MI + GCP SA binding (no WIF changes)
+- Centralized Entra ID audit logs for all cross-cloud access
+- Subject = MI Object ID — stable, unique identifier
+
+📖 **Full guide:** [`docs/hub-and-spoke-pattern.md`](docs/hub-and-spoke-pattern.md)  
+🏗️ **Terraform module:** [`terraform/hub-and-spoke/`](terraform/hub-and-spoke/)
+
+### AKS Workload Identity to GCP
+
+For Kubernetes workloads on AKS, **AKS Workload Identity** (successor to AAD Pod Identity) provides pod-level Entra ID tokens:
+
+```
+AKS Pod (Workload Identity) → Entra ID JWT → GCP WIF → GCP Resources
+```
+
+**Key advantages:**
+- Pod-level identity granularity via federated credentials
+- No secrets stored — uses projected service account tokens
+- Native Kubernetes integration (mutating webhook injects env vars)
+- Works with standard `GOOGLE_APPLICATION_CREDENTIALS` flow
+
+📖 **Full guide:** [`docs/aks-workload-identity-to-gcp.md`](docs/aks-workload-identity-to-gcp.md)
 
 ## Troubleshooting
 

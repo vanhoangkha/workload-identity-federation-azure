@@ -1,0 +1,19 @@
+project_id     = "my-gcp-project"
+project_number = "123456789012"
+tenant_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+hub_app_id_uri = "api://yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+
+workloads = {
+  "data-pipeline" = {
+    managed_identity_object_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    gcp_sa_id                  = "azure-data-pipeline-sa"
+    gcp_sa_display_name        = "Data Pipeline (AKS via WIF)"
+    gcp_roles                  = ["roles/bigquery.dataViewer", "roles/bigquery.jobUser"]
+  }
+  "storage-sync" = {
+    managed_identity_object_id = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+    gcp_sa_id                  = "azure-storage-sync-sa"
+    gcp_sa_display_name        = "Storage Sync (Azure VM via WIF)"
+    gcp_roles                  = ["roles/storage.objectAdmin"]
+  }
+}
