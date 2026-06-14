@@ -1,0 +1,5 @@
+# Default owners for everything in the repo
+* @vanhoangkha
+
+# Terraform modules require review
+/terraform/ @vanhoangkha
