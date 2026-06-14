@@ -1,19 +1,36 @@
-.DS_Store
-*.pyc
-__pycache__/
-.env
-*.key
-*.pem
-
 # Terraform
 .terraform/
 *.tfstate
-*.tfstate.*
-terraform.tfvars
+*.tfstate.backup
+*.tfplan
+.terraform.lock.hcl
 crash.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials (should never be committed)
+*.pem
+*.key
+*credentials*.json
+!gcp-credentials.json.example
+
+# Environment
+.env
+.env.local
