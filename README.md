@@ -15,6 +15,7 @@
 - [Terraform Module](#terraform-module)
 - [Enterprise Best Practices](#enterprise-best-practices)
 - [Advanced Patterns](#advanced-patterns)
+- [Enterprise Security Hardening](#enterprise-security-hardening)
 - [Troubleshooting](#troubleshooting)
 - [References](#references)
 
@@ -404,6 +405,24 @@ AKS Pod (Workload Identity) → Entra ID JWT → GCP WIF → GCP Resources
 - Works with standard `GOOGLE_APPLICATION_CREDENTIALS` flow
 
 📖 **Full guide:** [`docs/aks-workload-identity-to-gcp.md`](docs/aks-workload-identity-to-gcp.md)
+
+## Enterprise Security Hardening
+
+Based on [GCP Official Best Practices](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation) and aligned with CIS, SOC2, ISO 27001, and NIST 800-53.
+
+| Control | Description |
+|---------|-------------|
+| Dedicated WIF project | Centralized pool/provider management with org policy enforcement |
+| One provider per pool | Prevents subject collisions between providers |
+| Attribute conditions | Mandatory in production — restrict which identities can authenticate |
+| Immutable attributes | Use `assertion.sub` (Object ID) — never email or display name |
+| VPC Service Controls | Restrict STS endpoint access + regional endpoints for data residency |
+| Data Access Logs | Enable for `sts.googleapis.com` and `iamcredentials.googleapis.com` |
+| Org policy constraints | Disable SA key creation/upload, restrict provider types |
+| IAM Deny Policies | Prevent accidental deletion of WIF resources |
+| Credential validation | Verify `token_url` and `audience` before deployment |
+
+📖 **Full guide:** [`docs/enterprise-security-hardening.md`](docs/enterprise-security-hardening.md)
 
 ## Troubleshooting
 
