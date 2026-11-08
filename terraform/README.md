@@ -13,6 +13,7 @@ Production-ready Terraform module that creates all GCP resources needed for Azur
 ## Prerequisites (Azure side)
 
 Before running Terraform, manually create on Azure:
+
 1. Entra ID App Registration with Application ID URI
 2. Managed Identity assigned to your workload (VM, Functions, AKS)
 
@@ -27,6 +28,7 @@ terraform apply
 ```
 
 After apply, generate credential config:
+
 ```bash
 terraform output -json credential_config_commands
 ```

@@ -9,7 +9,7 @@
 
 - [Overview](#why-workload-identity-federation)
 - [Architecture](#architecture)
-- [Quick Start](#quick-start)
+- [Step-by-Step Setup](#step-by-step-setup)
 - [Verified Test Results](#verified-test-results)
 - [Examples](#examples)
 - [Terraform Module](#terraform-module)
@@ -77,11 +77,13 @@ The only costs come from the Google Cloud services you access (BigQuery, Cloud S
 ## Prerequisites
 
 ### Azure Side
+
 - Azure subscription with Entra ID admin access
 - A **Microsoft Entra ID Application** registered for Workload Identity Federation
 - Azure workload with an assigned **Managed Identity** (system-assigned or user-assigned)
 
 ### Google Cloud Side
+
 - Google Cloud Project with billing enabled
 - IAM Admin + Service Account Admin permissions
 - gcloud CLI v363.0.0+
@@ -163,6 +165,7 @@ gcloud iam workload-identity-pools providers create-oidc azure-provider \
 ```
 
 Replace:
+
 - `<TENANT_ID>`: Microsoft Entra ID tenant ID (GUID)
 - `<APPLICATION_ID_URI>`: The Application ID URI from Step 1
 
@@ -196,6 +199,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 ```
 
 Important:
+
 - `<MANAGED_IDENTITY_OBJECT_ID>` is the **Object ID** of the managed identity (GUID), not the client ID
 - Both roles are required
 - Wait 30-60 seconds for IAM propagation
@@ -375,13 +379,14 @@ steps:
 
 For organizations with many Azure subscriptions, the **Hub-and-Spoke** pattern uses a single Entra ID App Registration as the hub — all Managed Identities request tokens for this one app, and GCP WIF only needs one OIDC provider.
 
-```
+```text
 MI in Subscription A ──┐
 MI in Subscription B ──┼──→ Hub App (Entra ID) ──→ GCP WIF Pool (1 provider)
 MI in Subscription C ──┘
 ```
 
 **Benefits:**
+
 - Single WIF OIDC provider regardless of how many subscriptions/MIs you have
 - Onboarding only requires creating MI + GCP SA binding (no WIF changes)
 - Centralized Entra ID audit logs for all cross-cloud access
@@ -394,11 +399,12 @@ MI in Subscription C ──┘
 
 For Kubernetes workloads on AKS, **AKS Workload Identity** (successor to AAD Pod Identity) provides pod-level Entra ID tokens:
 
-```
+```text
 AKS Pod (Workload Identity) → Entra ID JWT → GCP WIF → GCP Resources
 ```
 
 **Key advantages:**
+
 - Pod-level identity granularity via federated credentials
 - No secrets stored — uses projected service account tokens
 - Native Kubernetes integration (mutating webhook injects env vars)
@@ -469,7 +475,7 @@ The following end-to-end test was performed on 2026-03-29, authenticating from a
 
 ### Test Output
 
-```
+```text
 1. Azure token:     OK (1390 chars)
 2. GCP STS token:   OK (1029 chars)
 3. SA Access Token:  OK (1024 chars)
@@ -485,7 +491,7 @@ The following end-to-end test was performed on 2026-03-29, authenticating from a
 
 ### Authentication Flow Verified
 
-```
+```text
 Azure Entra ID (JWT token, 1390 chars)
     |
     v  Token Exchange
@@ -543,8 +549,6 @@ curl -s -X POST \
 
 ---
 
-
-
 ---
 
 ## Enterprise Best Practices
@@ -553,7 +557,7 @@ curl -s -X POST \
 
 Separate pools by environment to prevent cross-environment access:
 
-```
+```text
 Organization
   +-- Pool: aws-production     (or azure-production)
   |     +-- Provider: account-111111111111
@@ -565,6 +569,7 @@ Organization
 ```
 
 Rules:
+
 - One pool per environment per cloud provider
 - One provider per AWS account or Azure tenant
 - Never share pools across environments
@@ -575,6 +580,7 @@ Rules:
 Always restrict which identities can authenticate. Never leave attribute conditions empty in production.
 
 **AWS:**
+
 ```bash
 # Only allow assumed-role ARNs (block IAM users, root)
 --attribute-condition="assertion.arn.startsWith('arn:aws:sts::<ACCOUNT_ID>:assumed-role/')"
@@ -587,6 +593,7 @@ Always restrict which identities can authenticate. Never leave attribute conditi
 ```
 
 **Azure:**
+
 ```bash
 # Only allow specific managed identities
 --attribute-condition="assertion.sub == '<OBJECT_ID>'"
@@ -604,6 +611,7 @@ Always restrict which identities can authenticate. Never leave attribute conditi
 | One SA per environment | Development only | Highest |
 
 Rules:
+
 - Grant roles at resource level, not project level
 - Use custom roles when predefined roles are too broad
 - Never use `roles/editor` or `roles/owner` in production
@@ -634,6 +642,7 @@ The credential config file contains no secrets, but manage it properly:
 | Terraform | Environment variable |
 
 Rules:
+
 - Safe to commit to git (no secrets inside)
 - Use separate credential configs per SA (one per use case)
 - Set `GOOGLE_APPLICATION_CREDENTIALS` env var, never hardcode paths
@@ -686,6 +695,7 @@ gcloud logging read '
 ```
 
 Set up alerts:
+
 - Alert on token exchange failures (potential unauthorized access attempts)
 - Alert on new principal accessing a SA for the first time
 - Alert on access from unexpected AWS accounts or Azure tenants
@@ -703,7 +713,8 @@ gcloud access-context-manager perimeters create wif-perimeter \
 ```
 
 Use regional STS endpoints for data residency compliance:
-```
+
+```text
 https://sts.us-central1.rep.googleapis.com/v1/token
 https://sts.europe-west1.rep.googleapis.com/v1/token
 https://sts.asia-southeast1.rep.googleapis.com/v1/token
@@ -753,8 +764,6 @@ For organizations using both AWS and Azure with GCP:
 | IaC | Separate Terraform modules per cloud, shared variables |
 | Rotation | No rotation needed (keyless), but review access quarterly |
 
-
-
 ---
 
 ## Terraform Module
@@ -770,21 +779,10 @@ terraform plan
 terraform apply
 ```
 
-## Examples
+## Example Scripts
 
 | File | Description |
 |------|-------------|
 | [examples/bigquery_query.py](examples/bigquery_query.py) | Query BigQuery |
 | [examples/gcs_sync.py](examples/gcs_sync.py) | Sync files to Cloud Storage |
 | [examples/cloud_logging.py](examples/cloud_logging.py) | Send logs to Cloud Logging |
-
-## References
-
-- [GCP: Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds)
-- [GCP: WIF Best Practices](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation)
-- [Terraform: Google Cloud Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-
-## License
-
-MIT License - see [LICENSE](LICENSE)
-

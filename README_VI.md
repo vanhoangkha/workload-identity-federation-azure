@@ -1,6 +1,5 @@
 # HƯỚNG DẪN TRIỂN KHAI WORKLOAD IDENTITY FEDERATION GIỮA AZURE VÀ GOOGLE CLOUD
 
-
 ---
 
 ## 1. Giới thiệu tổng quan
@@ -65,11 +64,13 @@ Chi phí chỉ phát sinh từ việc sử dụng các dịch vụ Google Cloud 
 ## 4. Điều kiện tiên quyết
 
 ### Phía Azure
+
 - Azure subscription với quyền quản trị Entra ID
 - Microsoft Entra ID Application đã đăng ký
 - Workload có Managed Identity (system-assigned hoặc user-assigned)
 
 ### Phía Google Cloud
+
 - Google Cloud Project với billing đã bật
 - Quyền IAM Admin + Service Account Admin
 - gcloud CLI phiên bản 363.0.0 trở lên
@@ -206,7 +207,7 @@ pip install google-cloud-bigquery google-cloud-storage google-cloud-logging
 | Nguồn danh tính | IAM Role + Instance Metadata | Managed Identity + Entra ID |
 | Loại token | AWS STS (SigV4) | OIDC JWT |
 | Định danh chủ thể | AWS ARN | Managed Identity Object ID |
-| Issuer URI | Không cần (tích hợp sẵn) | https://sts.windows.net/<TENANT_ID>/ |
+| Issuer URI | Không cần (tích hợp sẵn) | <https://sts.windows.net/><TENANT_ID>/ |
 | Thiết lập thêm | Không cần phía AWS | Đăng ký Entra ID App + App ID URI |
 | Tham số credential config | --aws --enable-imdsv2 | --azure --app-id-uri=<URI> |
 
@@ -218,25 +219,24 @@ pip install google-cloud-bigquery google-cloud-storage google-cloud-logging
 |-----|-------------|------------|
 | Permission iam.serviceAccounts.getAccessToken denied | Thiếu role serviceAccountTokenCreator | Cấp thêm role, chờ 60 giây |
 | Invalid audience | Application ID URI không khớp | Kiểm tra --allowed-audiences khớp với App ID URI trong Entra ID |
-| Token validation failed | Sai issuer URI hoặc tenant ID | Kiểm tra format: https://sts.windows.net/<TENANT_ID>/ (có dấu / cuối) |
+| Token validation failed | Sai issuer URI hoặc tenant ID | Kiểm tra format: <https://sts.windows.net/><TENANT_ID>/ (có dấu / cuối) |
 | Subject mismatch | Sai Object ID | Dùng Object ID của Managed Identity, không phải Client ID |
-
 
 ---
 
 ## 9. Tài liệu tham khảo
 
 1. Google Cloud - Workload Identity Federation with Azure
-   https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds
+   <https://cloud.google.com/iam/docs/workload-identity-federation-with-other-clouds>
 
 2. Azure - Managed Identities
-   https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
+   <https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview>
 
 3. Azure - App Registration
-   https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app
+   <https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app>
 
 4. Terraform - Google Cloud Provider
-   https://registry.terraform.io/providers/hashicorp/google/latest/docs
+   <https://registry.terraform.io/providers/hashicorp/google/latest/docs>
 
 ---
 
@@ -257,7 +257,7 @@ Kiểm thử end-to-end được thực hiện ngày 29/03/2026, xác thực t�
 
 ### Kết quả
 
-```
+```text
 1. Azure token:     OK (1390 ký tự)
 2. GCP STS token:   OK (1029 ký tự)
 3. SA Access Token:  OK (1024 ký tự)
@@ -273,7 +273,7 @@ Kiểm thử end-to-end được thực hiện ngày 29/03/2026, xác thực t�
 
 ### Luồng xác thực đã xác minh
 
-```
+```text
 Azure Entra ID (JWT token, 1390 ký tự)
     |
     v  Trao đổi token

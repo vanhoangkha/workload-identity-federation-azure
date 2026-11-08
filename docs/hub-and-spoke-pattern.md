@@ -6,7 +6,7 @@ In multi-subscription Azure environments, the **Hub-and-Spoke** pattern consolid
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                 Azure Spoke Subscriptions                        │
 │                                                                 │
@@ -172,7 +172,7 @@ def get_azure_token():
 
 ### Separate Pools per Environment
 
-```
+```text
 Organization
   +-- Pool: azure-production
   |     +-- Provider: azure-hub (tenant + prod app)

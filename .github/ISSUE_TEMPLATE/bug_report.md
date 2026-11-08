@@ -16,6 +16,7 @@ about: Report an issue with the guide or Terraform module
 ## Actual Behavior
 
 ## Environment
+
 - Cloud: AZURE / GCP
 - gcloud version:
 - Terraform version:
