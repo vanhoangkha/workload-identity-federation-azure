@@ -1,6 +1,8 @@
 """Sync files to Cloud Storage from AWS EC2 via WIF."""
 import os
+
 from google.cloud import storage
+
 
 def sync_directory(project_id, bucket_name, local_dir, gcs_prefix):
     client = storage.Client(project=project_id)

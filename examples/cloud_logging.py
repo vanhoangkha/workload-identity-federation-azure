@@ -1,7 +1,9 @@
 """Send logs to Cloud Logging from AWS EC2 via WIF."""
-import socket
 import datetime
+import socket
+
 from google.cloud import logging as cloud_logging
+
 
 def main(project_id, logger_name="azure-application"):
     client = cloud_logging.Client(project=project_id)

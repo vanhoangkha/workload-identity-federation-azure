@@ -31,7 +31,7 @@ EOF
 
 > **GCP Recommendation:** Use a single provider per workload identity pool to avoid subject collisions.
 
-```
+```text
 # CORRECT: One provider per pool
 Pool: aws-production    → Provider: hub-provider (AWS)
 Pool: aws-staging       → Provider: hub-provider (AWS)
@@ -152,6 +152,7 @@ gcloud iam workload-identity-pools create-cred-config \
 ```
 
 Regional endpoints:
+
 - `https://sts.us-central1.rep.googleapis.com/v1/token`
 - `https://sts.europe-west1.rep.googleapis.com/v1/token`
 - `https://sts.asia-southeast1.rep.googleapis.com/v1/token`
@@ -252,6 +253,7 @@ EOF
 ### Validation Checklist
 
 Before deploying a credential config:
+
 - [ ] `token_url` starts with `https://sts.googleapis.com` or `https://sts.REGION.rep.googleapis.com`
 - [ ] `service_account_impersonation_url` starts with `https://iamcredentials.googleapis.com`
 - [ ] `audience` matches your WIF pool/provider URL

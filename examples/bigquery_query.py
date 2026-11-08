@@ -1,6 +1,6 @@
 """Query BigQuery from AWS EC2 via Workload Identity Federation."""
-import os
 from google.cloud import bigquery
+
 
 def main():
     client = bigquery.Client()

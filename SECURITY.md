@@ -5,7 +5,7 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. Do NOT open a public issue
-2. Email: security@example.com
+2. Email: <security@example.com>
 3. Include steps to reproduce
 
 ## Security Best Practices
