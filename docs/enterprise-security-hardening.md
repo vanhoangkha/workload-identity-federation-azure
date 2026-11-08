@@ -69,7 +69,7 @@ Pool: multi-cloud → Provider: aws-provider + azure-provider
 
 > **GCP Recommendation:** Use immutable, non-reusable attributes in attribute mappings.
 
-| Cloud | ✅ Use (immutable) | ❌ Avoid (mutable) |
+| Cloud | Use (immutable) | Avoid (mutable) |
 |-------|-------------------|-------------------|
 | AWS | `assertion.arn` | Email, tags |
 | Azure | `assertion.sub` (Object ID) | `assertion.email`, `assertion.name` |
@@ -273,13 +273,13 @@ Before deploying a credential config:
 
 | Framework | WIF Control |
 |-----------|-------------|
-| CIS GCP 1.x | 1.15: Disable SA keys ✓ |
-| SOC2 CC6.1 | Logical access: keyless auth ✓ |
-| SOC2 CC6.2 | Authentication: short-lived tokens ✓ |
-| ISO 27001 A.9.4 | System access control: federation ✓ |
-| NIST 800-53 IA-2 | Identification: external IdP ✓ |
-| NIST 800-53 IA-5 | Authenticator mgmt: auto-rotate ✓ |
-| PCI-DSS 8.6 | Service account management ✓ |
+| CIS GCP 1.x | 1.15: Disable SA keys |
+| SOC2 CC6.1 | Logical access: keyless auth |
+| SOC2 CC6.2 | Authentication: short-lived tokens |
+| ISO 27001 A.9.4 | System access control: federation |
+| NIST 800-53 IA-2 | Identification: external IdP |
+| NIST 800-53 IA-5 | Authenticator mgmt: auto-rotate |
+| PCI-DSS 8.6 | Service account management |
 
 ## References
 

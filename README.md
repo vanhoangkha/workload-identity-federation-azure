@@ -387,8 +387,8 @@ MI in Subscription C ──┘
 - Centralized Entra ID audit logs for all cross-cloud access
 - Subject = MI Object ID — stable, unique identifier
 
-📖 **Full guide:** [`docs/hub-and-spoke-pattern.md`](docs/hub-and-spoke-pattern.md)  
-🏗️ **Terraform module:** [`terraform/hub-and-spoke/`](terraform/hub-and-spoke/)
+**Full guide:** [`docs/hub-and-spoke-pattern.md`](docs/hub-and-spoke-pattern.md)
+**Terraform module:** [`terraform/hub-and-spoke/`](terraform/hub-and-spoke/)
 
 ### AKS Workload Identity to GCP
 
@@ -404,7 +404,7 @@ AKS Pod (Workload Identity) → Entra ID JWT → GCP WIF → GCP Resources
 - Native Kubernetes integration (mutating webhook injects env vars)
 - Works with standard `GOOGLE_APPLICATION_CREDENTIALS` flow
 
-📖 **Full guide:** [`docs/aks-workload-identity-to-gcp.md`](docs/aks-workload-identity-to-gcp.md)
+**Full guide:** [`docs/aks-workload-identity-to-gcp.md`](docs/aks-workload-identity-to-gcp.md)
 
 ## Enterprise Security Hardening
 
@@ -422,7 +422,7 @@ Based on [GCP Official Best Practices](https://cloud.google.com/iam/docs/best-pr
 | IAM Deny Policies | Prevent accidental deletion of WIF resources |
 | Credential validation | Verify `token_url` and `audience` before deployment |
 
-📖 **Full guide:** [`docs/enterprise-security-hardening.md`](docs/enterprise-security-hardening.md)
+**Full guide:** [`docs/enterprise-security-hardening.md`](docs/enterprise-security-hardening.md)
 
 ## Troubleshooting
 
